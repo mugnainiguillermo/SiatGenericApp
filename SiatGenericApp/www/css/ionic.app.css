@@ -1,4 +1,4 @@
-@charset "UTF-8";
+﻿@charset "UTF-8";
 /*!
   Ionicons, v2.0.1
   Created by Ben Sperry for the Ionic Framework, http://ionicons.com/
@@ -3490,6 +3490,14 @@ ion-infinite-scroll {
     -webkit-transform: translate3d(0, 0, 0); }
 
 /* If you change these, change platform.scss as well */
+.spinner svg {
+    width: 19% !important;
+    height: 85px !important;
+    position: absolute;
+    top: 40%;
+    left: 40%;
+}
+
 .has-header {
   top: 44px; }
 
@@ -9811,3 +9819,4 @@ a.button {
   background-color: white; }
   .bottom-form button {
     margin: 0px !important; }
+

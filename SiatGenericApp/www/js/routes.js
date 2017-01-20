@@ -10,7 +10,7 @@ angular.module('app.routes', [])
     
   
 
-      .state('inicio', {
+  .state('inicio', {
     url: '/inicio',
     templateUrl: 'templates/inicio.html',
     controller: 'inicioCtrl'
@@ -40,10 +40,10 @@ angular.module('app.routes', [])
     controller: 'menCtrl'
   })
 
-  .state('mensajes', {
-    url: '/chat',
-    templateUrl: 'templates/mensajes.html',
-    controller: 'mensajesCtrl'
+  .state('mensajesEspecialista', {
+    url: '/mensajesEspecialista',
+    templateUrl: 'templates/mensajesEspecialista.html',
+    controller: 'mensajesEspecialistaCtrl'
   })
 
   .state('pacientes', {

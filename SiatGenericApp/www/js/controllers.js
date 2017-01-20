@@ -1,66 +1,278 @@
 angular.module('app.controllers', [])
   
-.controller('inicioCtrl', ['$scope', '$stateParams', // The following is the constructor function for this page's controller. See https://docs.angularjs.org/guide/controller
-// You can include any angular dependencies as parameters for this function
-// TIP: Access Route Parameters for your page via $stateParams.parameterName
-function ($scope, $stateParams) {
+.controller('inicioCtrl', ['$scope','localstorageFactory','$state', function ($scope,localstorageFactory,$state) {
+
+}])
+   
+.controller('seleccioneUsuarioCtrl', ['$scope', 'localstorageFactory', '$state', function ($scope, localstorageFactory, $state) {
+    console.log("init: " + localstorageFactory.getlogUser());
+    if (localstorageFactory.getlogUser() !== 'undefined') {
+        console.log("$state: ");
+        $state.go('pacientes');
+    }
+}])
+   
+.controller('loginPacienteCtrl', ['$scope', 'localstorageFactory', function ($scope, localstorageFactory) {
 
 
 }])
    
-.controller('seleccioneUsuarioCtrl', ['$scope', '$stateParams', // The following is the constructor function for this page's controller. See https://docs.angularjs.org/guide/controller
-// You can include any angular dependencies as parameters for this function
-// TIP: Access Route Parameters for your page via $stateParams.parameterName
-function ($scope, $stateParams) {
-
+.controller('loginEspecialistaCtrl', ['$scope', '$http', '$state', 'localstorageFactory', 'LoginService', '$ionicPopup', '$timeout', function ($scope, $http, $state, localstorageFactory, LoginService, $ionicPopup, $timeout) {
+    $scope.data = {};
+    $scope.errorLogin = false;
+    $scope.login = function () {
+        console.log('pass ' + $scope.data.username + $scope.data.password);
+        LoginService.loginUser($scope.data.username, $scope.data.password)
+            .success(function (data) {
+                if (typeof (data[0]) !== 'undefined' && data[0] !== null) {
+                    $state.go('pacientes');
+                    localstorageFactory.setlogUser($scope.data);
+                } else {
+                    var alertPopup = $ionicPopup.alert({
+                        title: 'Login Error!',
+                        template: 'Usuario o Contraseña Incorrectos!'
+                    });
+                }     
+            })
+            .error(function (data) {
+                var alertPopup = $ionicPopup.alert({
+                    title: 'Login Error!',
+                    template: 'Usuario o Contraseña Incorrectos!'
+                });
+            });
+    }
+}])
+   
+.controller('menCtrl', ['$scope', '$stateParams', function ($scope, $stateParams) {
 
 }])
    
-.controller('loginPacienteCtrl', ['$scope', '$stateParams', // The following is the constructor function for this page's controller. See https://docs.angularjs.org/guide/controller
-// You can include any angular dependencies as parameters for this function
-// TIP: Access Route Parameters for your page via $stateParams.parameterName
-function ($scope, $stateParams) {
+.controller('mensajesEspecialistaCtrl', ['$scope', 'msjService', 'localstorageFactory', '$http', '$window', '$ionicScrollDelegate', function ($scope, msjService, localstorageFactory, $http, $window, $ionicScrollDelegate) {
+    var usersId = localstorageFactory.getIdUser();
+    $scope.chatResult = [];
+    $scope.sendMessage = "";
+    msjService.msjUser(usersId.medico)
+        .success(function (data) {
+            $scope.dataChat = data[0].MESSAGES_object;
+            var isMedico, userFoto;
+            for (var i = 0; i < $scope.dataChat.length; i++) {
+                if($scope.dataChat[i].from === usersId.medico){
+                    esMedico = true;
+                    userFoto = usersId.medicoFoto;
+                }else {
+                    esMedico = false;
+                    userFoto = usersId.pacienteFoto;
+                }
+                if (usersId.paciente === $scope.dataChat[i].to || usersId.paciente === $scope.dataChat[i].from) {
+                    $scope.chatResult.push({
+                        msj: $scope.dataChat[i].mensaje,
+                        userFoto: userFoto,
+                        esMedico: esMedico
+                    });
+                }
+            }
+            $ionicScrollDelegate.scrollBottom();
+        })
+        .error(function (data) {
+            var alertPopup = $ionicPopup.alert({
+                title: 'Login Error!',
+                template: 'Usuario o Contraseña Incorrectos!'
+            });
+        });
 
+    $scope.isMedicClass = function (esMedico) {
+        return esMedico ? 'leftSide.html' : 'rightSide.html';
+    };
+
+    $scope.sendMsj = function (sendMessage) {
+        var info = "id_from=" + usersId.medico + "&id_to=" + usersId.paciente + "&mensaje=" + sendMessage;
+
+        $http({
+            url: "http://www.e-siat.net/siat_webservice_test/index.php/mensajes/setMessage",
+            method: "POST",
+            data: info,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        })
+        .success(function (data, status, headers, config) {
+            $scope.chatResult.push({
+                msj     : sendMessage,
+                userFoto: usersId.medicoFoto,
+                esMedico: true
+            });
+            $ionicScrollDelegate.scrollBottom();
+        });
+        $scope.sendMessage = "";
+        $scope.$apply;
+    }
+}])
+   
+.controller('pacientesCtrl', ['$scope', '$http', 'localstorageFactory', function ($scope, $http, localstorageFactory) {
+    $scope.loading = true;
+    $scope.usersRef = [];
+    $scope.activeUser = localstorageFactory.getlogUser();
+    var info = "usuario=" + $scope.activeUser.username + "&contrasenia=" + $scope.activeUser.password;
+    $http({
+        url: "http://www.e-siat.net/siat_webservice_test/index.php/logIn/inicioEspecialista",
+        method: "POST",
+        data: info,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    })
+    .success(function (data, status, headers, config) {
+        $scope.idUsuario = data[0].idUsuario;
+        var info = "idEspecialista=" + data[0].idEspecialista;
+        $http({
+            url: "http://www.e-siat.net/siat_webservice_test/index.php/logIn/getPacientes",
+            method: "POST",
+            data: info,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        })
+        .success(function (data, status, headers, config) {
+            console.log("hola" + data[0].pacientes);
+            $scope.loading = false;
+            $scope.result = data[0].pacientes;
+            var j = 0, x = 0;
+            for (var i = 0; i < $scope.result.length; i++) {
+                console.log($scope.result[i].idUsuario);
+                var info = "idPaciente=" + $scope.result[i].idPaciente;
+                $http({
+                    url: "http://www.e-siat.net/siat_webservice_test/index.php/logIn/getTratamiento",
+                    method: "POST",
+                    data: info,
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                })
+                .success(function (data, status, headers, config) {
+                    $scope.result[j].comercial = data[0].comercial;
+                    console.log("result: " + j + $scope.result[j].comercial);
+                    var info = "idUsuario=" + $scope.result[j].idPaciente;
+                    $http({
+                        url: "http://www.e-siat.net/siat_webservice_test/index.php/logIn/getPacienteInfo",
+                        method: "POST",
+                        data: info,
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                    })
+                    .success(function (data, status, headers, config) {
+                        $scope.result[x].imagen_perfil = "http://e-siat.net/siat/profilepicture/" + data[0].imagen_perfil;
+                        console.log("imagen_perfil: " + $scope.result[x].imagen_perfil);
+                                        
+                        $scope.usersRef.push({
+                            name        : $scope.result[x].nombre,
+                            lastName    : $scope.result[x].apellido,
+                            userFoto    : $scope.result[x].imagen_perfil,
+                            idUsuario   : $scope.result[x].idUsuario,
+                            idPaciente  : $scope.result[x].idPaciente
+                            });
+                        x++;
+                    });
+                    j++;
+                });
+            }
+        });
+    });
+
+    $scope.itemClick = function (index , idUsuarioPaciente) {
+        var pacienteFoto = $scope.result[index].imagen_perfil;
+        var idUsuario = {
+                            paciente    : idUsuarioPaciente,
+                            pacienteFoto: pacienteFoto,
+                            medico      : $scope.idUsuario,
+                            medicoFoto  : "http://image.flaticon.com/icons/svg/204/204225.svg"
+                        };
+        localstorageFactory.setIdUser(idUsuario);
+    }
+
+    $scope.turnos = function () {
+        localstorageFactory.setUsersRef($scope.usersRef);
+    }
+
+    $scope.logOut = function () {
+        localstorageFactory.remove();
+    }
 
 }])
    
-.controller('loginEspecialistaCtrl', ['$scope', '$stateParams', // The following is the constructor function for this page's controller. See https://docs.angularjs.org/guide/controller
-// You can include any angular dependencies as parameters for this function
-// TIP: Access Route Parameters for your page via $stateParams.parameterName
-function ($scope, $stateParams) {
+.controller('turnosCtrl', ['$scope', '$http', 'localstorageFactory','$filter', function ($scope, $http, localstorageFactory, $filter) {
+    $scope.turnosInfo = localstorageFactory.getUsersRef();
+    $scope.turnosInfoSem = [];
+    $scope.turnosInfoProx = [];
 
-
-}])
-   
-.controller('menCtrl', ['$scope', '$stateParams', // The following is the constructor function for this page's controller. See https://docs.angularjs.org/guide/controller
-// You can include any angular dependencies as parameters for this function
-// TIP: Access Route Parameters for your page via $stateParams.parameterName
-function ($scope, $stateParams) {
-
-
-}])
-   
-.controller('mensajesCtrl', ['$scope', '$stateParams', // The following is the constructor function for this page's controller. See https://docs.angularjs.org/guide/controller
-// You can include any angular dependencies as parameters for this function
-// TIP: Access Route Parameters for your page via $stateParams.parameterName
-function ($scope, $stateParams) {
-
-
-}])
-   
-.controller('pacientesCtrl', ['$scope', '$stateParams', // The following is the constructor function for this page's controller. See https://docs.angularjs.org/guide/controller
-// You can include any angular dependencies as parameters for this function
-// TIP: Access Route Parameters for your page via $stateParams.parameterName
-function ($scope, $stateParams) {
-
-
-}])
-   
-.controller('turnosCtrl', ['$scope', '$stateParams', // The following is the constructor function for this page's controller. See https://docs.angularjs.org/guide/controller
-// You can include any angular dependencies as parameters for this function
-// TIP: Access Route Parameters for your page via $stateParams.parameterName
-function ($scope, $stateParams) {
+    var j = 0, p = 0, x= 0;
+    for (var i = 0; i < $scope.turnosInfo.length; i++) {
+        var info = "idUsuario=" + $scope.turnosInfo[i].idUsuario;
+        $http({
+            url: "http://www.e-siat.net/siat_webservice_test/index.php/logIn/update",
+            method: "POST",
+            data: info,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        })
+        .success(function (data, status, headers, config) {
+            d = new Date(data[8].hora);
+            var day = d.getDay();
+            if (diff = d.getDate() - day + (day == 0 ? -6 : 1) <= 6) {
+                $scope.turnosInfoSem.push($scope.turnosInfo[x]);
+                $scope.turnosInfoSem[j].turno = data[8].hora;
+                j++;
+            } else {
+                $scope.turnosInfoProx.push($scope.turnosInfo[x]);
+                $scope.turnosInfoProx[p].turno = data[8].hora;
+                p++;
+            }
+            x++;
+        });
+    }
 
 
 }])
  
+
+.controller('chatWeaCtrl', ['$scope', '$http', function ($scope, $http) {
+    $scope.loading = true;
+    var info = "usuario=medicoapp&contrasenia=guille1234";
+    $http({
+        url: "http://www.e-siat.net/siat_webservice_test/index.php/logIn/inicioEspecialista",
+        method: "POST",
+        data: info,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    })
+    .success(function (data, status, headers, config) {
+        console.log(data[0].idEspecialista);
+        $scope.idUsuario = data[0].idUsuario;
+        var info = "idEspecialista=" + data[0].idEspecialista;
+        $http({
+            url: "http://www.e-siat.net/siat_webservice_test/index.php/logIn/getPacientes",
+            method: "POST",
+            data: info,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        })
+        .success(function (data, status, headers, config) {
+            console.log("hola" + data[0].pacientes);
+            $scope.loading = false;
+            $scope.result = data[0].pacientes;
+
+            for (var i = 0; i < $scope.result.length; i++) {
+                console.log("idPaciente" + $scope.result[i].idPaciente);
+                var info = "idPaciente=" + $scope.result[i].idPaciente;
+                $http({
+                    url: "http://www.e-siat.net/siat_webservice_test/index.php/logIn/getTratamiento",
+                    method: "POST",
+                    data: info,
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                })
+                .success(function (data, status, headers, config) {
+                    console.log("droga" + data[0].droga);
+                    //$scope.result[i].droga = data[0].droga;
+                })
+                .error(function (data, status, headers, config) {
+                    console.log("error");
+                });
+                console.log("droga" + $scope.result[i].idPaciente);
+            }
+        })
+        .error(function (data, status, headers, config) {
+            console.log("error");
+        });
+    })
+    .error(function (data, status, headers, config) {
+        console.log(data);
+        console.log("error");
+    });
+}])
